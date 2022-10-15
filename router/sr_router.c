@@ -86,10 +86,10 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   struct sr_if *find_iterator = sr->if_list;
-  printf("-------------------------------");
+  printf("-------------------------------\n");
   print_addr_eth(ehdr->ether_dhost);
   print_addr_eth(received_interface->addr);
-  printf("-------------------------------");
+  printf("-------------------------------\n");
   sr_print_if_list(sr);
   printf("Below is the destination ip address\n");
   print_addr_ip_int(ntohl(iphdr->ip_dst));
