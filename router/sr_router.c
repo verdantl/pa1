@@ -85,10 +85,18 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   /*sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet); */
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
+  struct sr_if *find_iterator = sr->if_list;
   print_addr_ip_int(ntohl(sr->if_list->next->ip));
   print_addr_ip_int(ntohl(iphdr->ip_dst));
-  if (sr->if_list->ip == iphdr->ip_dst) {
-    printf("This is for me!!!\n");
+
+  while (find_iterator) {
+    if (find_iterator->ip == iphdr->ip_dst) {
+    printf("This is for me!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    }
+    find_iterator = find_iterator-> next;
   }
+
+
+  
 
 }
