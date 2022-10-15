@@ -68,6 +68,7 @@ void sr_handlepacket(struct sr_instance* sr,
   /* fill in code here */
 
   uint16_t ethtype = ethertype(packet);
+
   print_hdrs(packet, len);
   if (ethtype == ethertype_ip) { /* IP */
       printf("This is an IP packettttttttttttttttttttttttttttttttttttt\n");
@@ -103,6 +104,7 @@ void sr_handle_ip_packet(struct sr_instance* sr,
         icmp_hdr->icmp_sum = 0;
         if (icmp_sum_temp != cksum(icmp_hdr, sizeof(sr_icmp_hdr_t))) {
           icmp_hdr->icmp_sum = icmp_sum_temp;
+          printf("%d\n", icmp_sum_temp);
           printf("ICMP header checksum is incorrect\n");
           return;
         }
