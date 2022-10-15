@@ -86,13 +86,31 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet; */
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   struct sr_if *find_iterator = sr->if_list;
-  print_addr_ip_int(ntohl(sr->if_list->ip));
+  sr_print_if_list(sr);
+  printf("Below is the destination ip address\n");
   print_addr_ip_int(ntohl(iphdr->ip_dst));
 
   while (find_iterator) {
     print_addr_ip_int(ntohl(find_iterator->ip));
     if (find_iterator->ip == iphdr->ip_dst) {
-    printf("This is for me!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      printf("This is for me!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      sr_icmp_hdr_t *icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+        /* checking icmp checkksum */
+        uint16_t icmp_sum_temp = icmp_hdr->icmp_sum;
+        icmp_hdr->icmp_sum = 0;
+        if (icmp_sum_temp != cksum(icmp_hdr, sizeof(sr_icmp_hdr_t))) {
+          icmp_hdr->icmp_sum = icmp_sum_temp;
+          printf("Icmp header checksum is incorrect\n");
+          return;
+        }
+        icmp_hdr->icmp_sum = icmp_sum_temp;
+
+      /* icmp request */
+      if (icmp_hdr->icmp_type == 8) {
+
+
+      }
+
     }
     find_iterator = find_iterator -> next;
   }
