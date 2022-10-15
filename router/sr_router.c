@@ -81,10 +81,10 @@ void sr_handle_ip_packet(struct sr_instance* sr,
         unsigned int len,
         char* interface/* lent */)
 {
-  // struct sr_if* received_interface= sr_get_interface(sr, interface);
-  /*sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet); */
+  /* struct sr_if* received_interface= sr_get_interface(sr, interface);
+  sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet);
+  sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet; */
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-  // sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
   struct sr_if *find_iterator = sr->if_list;
   print_addr_ip_int(ntohl(sr->if_list->ip));
   print_addr_ip_int(ntohl(iphdr->ip_dst));
