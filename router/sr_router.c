@@ -81,9 +81,9 @@ void sr_handle_ip_packet(struct sr_instance* sr,
         unsigned int len,
         char* interface/* lent */)
 {
-  /* struct sr_if* received_interface= sr_get_interface(sr, interface);
-  sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet);
-  sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet; */
+  struct sr_if* received_interface = sr_get_interface(sr, interface);
+  /*sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet); */
+  sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   struct sr_if *find_iterator = sr->if_list;
   sr_print_if_list(sr);
@@ -95,12 +95,12 @@ void sr_handle_ip_packet(struct sr_instance* sr,
     if (find_iterator->ip == iphdr->ip_dst) {
       printf("This is for me!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       sr_icmp_hdr_t *icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-        /* checking icmp checkksum */
+        /* checking ICMP checkksum */
         uint16_t icmp_sum_temp = icmp_hdr->icmp_sum;
         icmp_hdr->icmp_sum = 0;
         if (icmp_sum_temp != cksum(icmp_hdr, sizeof(sr_icmp_hdr_t))) {
           icmp_hdr->icmp_sum = icmp_sum_temp;
-          printf("Icmp header checksum is incorrect\n");
+          printf("ICMP header checksum is incorrect\n");
           return;
         }
         icmp_hdr->icmp_sum = icmp_sum_temp;
@@ -108,7 +108,21 @@ void sr_handle_ip_packet(struct sr_instance* sr,
       /* icmp request */
       if (icmp_hdr->icmp_type == 8) {
 
+          /* change ETHERNET header*/
+          memcpy(ehdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN);
+          memcpy(ehdr->ether_shost, received_interface->addr, ETHER_ADDR_LEN);
 
+          /* change IP header */
+          iphdr->ip_dst = iphdr->ip_src;
+          iphdr->ip_src = received_interface->ip;
+
+          /* change ICMP header */
+          icmp_hdr->icmp_type = 0x00;
+          icmp_hdr->icmp_sum = 0;
+          icmp_hdr->icmp_sum = cksum(icmp_hdr, sizeof(sr_icmp_hdr_t));
+
+          /* send icmp reply back */
+          sr_send_packet(sr, packet, len, interface);
       }
 
     }
