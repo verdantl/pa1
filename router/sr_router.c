@@ -97,7 +97,7 @@ void sr_handle_ip_packet(struct sr_instance* sr,
 
   while (find_iterator) {
     if (find_iterator->ip == iphdr->ip_dst) {
-      printf("This is for me!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      printf("This is for me!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       sr_icmp_hdr_t *icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
         /* checking ICMP checkksum */
         uint16_t icmp_sum_temp = icmp_hdr->icmp_sum;
