@@ -126,7 +126,7 @@ void sr_handle_ip_packet(struct sr_instance* sr,
           /* change ICMP header */
           icmp_hdr->icmp_type = 0x00;
           icmp_hdr->icmp_sum = 0;
-          icmp_hdr->icmp_sum = cksum(icmp_hdr, sizeof(sr_icmp_hdr_t));
+          // icmp_hdr->icmp_sum = cksum(icmp_hdr, sizeof(sr_icmp_hdr_t));
 
           /* send icmp reply back */
           sr_send_packet(sr, packet, len, interface);
