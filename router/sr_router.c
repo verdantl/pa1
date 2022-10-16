@@ -150,6 +150,7 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   if (iphdr->ip_ttl == 0) {
     /* Time exceeded ################ TO DO ################*/
     handle_icmp_request(sr, packet, len, 11, 0, received_interface);
+    return;
   }
 
   /* perform LPM */
@@ -193,6 +194,7 @@ void sr_handle_ip_packet(struct sr_instance* sr,
     /* No match found ############# TO DO ##################*/
     printf("ICMP net unreachable");
     handle_icmp_request(sr, packet, len, 3, 0, received_interface);
+    return;
   }
 }
 
