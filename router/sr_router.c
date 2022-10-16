@@ -71,8 +71,7 @@ void sr_handlepacket(struct sr_instance* sr,
   uint16_t ethtype = ethertype(packet);
 
   print_hdrs(packet, len);
-  if (ethtype == ethertype_ip) { /* IP */
-      printf("This is an IP packettttttttttttttttttttttttttttttttttttt\n");
+  if (ethtype == ethertype_ip) { /* IP packet */
       sr_handle_ip_packet(sr, packet, len, interface);
     }
 
@@ -152,68 +151,59 @@ void sr_handle_ip_packet(struct sr_instance* sr,
             sr_send_packet(sr, packet, len, interface);
         }
       }
-
     }
-
-    /*　The packet is not for me　*/
-    else {
-      iphdr->ip_ttl -= 1;
-      iphdr->ip_sum = 0;
-      iphdr->ip_sum = cksum(iphdr, sizeof(sr_ip_hdr_t));
-
-      if (iphdr->ip_ttl == 0) {
-        /* Time exceeded ################ TO DO ################*/
-        return;
-      }
-
-      /* perform LPM */
-      struct sr_rt *curr_routing_node = sr->routing_table;
-      struct sr_rt *matched = NULL;
-      while (curr_routing_node) {
-        uint32_t masked_dest = iphdr->ip_dst & curr_routing_node->mask.s_addr;
-        if (masked_dest == curr_routing_node->dest.s_addr) {
-          matched = curr_routing_node;
-          break;
-
-        }
-        curr_routing_node = curr_routing_node->next;
-      }
-
-      if (matched) {
-        printf("matcheddddddddddddd\n");
-        /* struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache, iphdr->ip_dst); */
-        struct sr_arpentry *arp_entry = sr_arpcache_lookup(&(sr->cache), matched->gw.s_addr);
-
-        if (arp_entry) { /* ARP cache hit */
-          printf("ARP hit");
-          /* send frame */
-          struct sr_if *new_interface = sr_get_interface(sr, matched->interface);
-          memcpy(ehdr->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN);
-          memcpy(ehdr->ether_shost, new_interface->addr, ETHER_ADDR_LEN);
-          free(arp_entry);
-          sr_send_packet(sr, packet, len, new_interface->name);
-          return;
-        }
-
-        else { /* ARP cache miss */
-          /*send arp request */
-          /*struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), matched->gw.s_addr, packet, len, matched->interface);
-          handle_arpreq(sr, req); */
-          return;
-        }
-
-      }
-
-      else {
-        /* No match found ############# TO DO ##################*/
-        printf("ICMP not unreachable");
-      }
-    }
-
     curr_if_node = curr_if_node->next;
   }
 
+  /*　The packet is not for me　*/
+  iphdr->ip_ttl -= 1;
+  iphdr->ip_sum = 0;
+  iphdr->ip_sum = cksum(iphdr, sizeof(sr_ip_hdr_t));
 
-  
+  if (iphdr->ip_ttl == 0) {
+    /* Time exceeded ################ TO DO ################*/
+    return;
+  }
 
+  /* perform LPM */
+  struct sr_rt *curr_routing_node = sr->routing_table;
+  struct sr_rt *matched = NULL;
+  while (curr_routing_node) {
+    uint32_t masked_dest = iphdr->ip_dst & curr_routing_node->mask.s_addr;
+    if (masked_dest == curr_routing_node->dest.s_addr) {
+      matched = curr_routing_node;
+      break;
+
+    }
+    curr_routing_node = curr_routing_node->next;
+  }
+
+  if (matched) {
+    printf("matcheddddddddddddd\n");
+    /* struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache, iphdr->ip_dst); */
+    struct sr_arpentry *arp_entry = sr_arpcache_lookup(&(sr->cache), matched->gw.s_addr);
+
+    if (arp_entry) { /* ARP cache hit */
+      printf("ARP hit");
+      /* send frame */
+      struct sr_if *new_interface = sr_get_interface(sr, matched->interface);
+      memcpy(ehdr->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN);
+      memcpy(ehdr->ether_shost, new_interface->addr, ETHER_ADDR_LEN);
+      free(arp_entry);
+      sr_send_packet(sr, packet, len, new_interface->name);
+      return;
+    }
+    else { /* ARP cache miss */
+      /*send arp request */
+      /*struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), matched->gw.s_addr, packet, len, matched->interface);
+      handle_arpreq(sr, req); */
+      return;
+    }
+
+  }
+
+  else {
+    /* No match found ############# TO DO ##################*/
+    printf("ICMP not unreachable");
+  }
 }
