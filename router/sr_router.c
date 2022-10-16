@@ -85,7 +85,6 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   struct sr_if* received_interface = sr_get_interface(sr, interface);
   sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-  struct sr_if *find_iterator = sr->if_list;
   printf("-------------------------------\n");
   print_addr_eth(ehdr->ether_dhost);
   print_addr_eth(received_interface->addr);
@@ -111,8 +110,9 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   iphdr->ip_sum = original_ip_checksum;
 
   /* find out if packet is for me */
-  while (find_iterator) {
-    if (find_iterator->ip == iphdr->ip_dst) {
+  struct sr_if *curr_if_node = sr->if_list;
+  while (curr_if_node) {
+    if (curr_if_node->ip == iphdr->ip_dst) {
       printf("This is for me!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       sr_icmp_hdr_t *icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
@@ -153,7 +153,51 @@ void sr_handle_ip_packet(struct sr_instance* sr,
       }
 
     }
-    find_iterator = find_iterator -> next;
+
+    /*　The packet is not for me　*/
+    else {
+      iphdr->ip_ttl -= 1;
+      iphdr->ip_sum = 0;
+      iphdr->ip_sum = cksum(iphdr, sizeof(sr_ip_hdr_t));
+
+      /* perform LPM */
+      struct sr_rt *curr_routing_node = sr->routing_table;
+      struct sr_rt *matched = NULL;
+      while (curr_routing_node) {
+        uint32_t masked_dest = iphdr->ip_dst & curr_routing_node->mask.s_addr;
+        if (masked_dest == curr_routing_node->dest.s_addr) {
+          matched = curr_routing_node;
+          break;
+
+        }
+        curr_routing_node = curr_routing_node->next;
+      }
+
+      if (matched) {
+        printf("matcheddddddddddddd\n");
+        /* struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache, iphdr->ip_dst); */
+        struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache, matched->gw.s_addr);
+
+        if (arp_entry) { /* arp hit */
+          printf("ARP hit");
+          /* send fram*/
+
+        }
+
+        else {
+          /*send arp request */
+          struct sr_arpreq *req = sr_arpcache_queuereq(&sr->cache, matched->gw.s_addr, packet, len, matched->interface);
+          /* handle_arpreq(req, sr); */
+        }
+
+      }
+
+      else {
+        printf("ICMP not unreachable");
+      }
+    }
+
+    curr_if_node = curr_if_node->next;
   }
 
 
