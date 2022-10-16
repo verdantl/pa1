@@ -85,13 +85,13 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   struct sr_if* received_interface = sr_get_interface(sr, interface);
   sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
   sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-  printf("-------------------------------\n");
+  /*printf("-------------------------------\n");
   print_addr_eth(ehdr->ether_dhost);
   print_addr_eth(received_interface->addr);
   printf("-------------------------------\n");
   sr_print_if_list(sr);
   printf("Below is the destination ip address\n");
-  print_addr_ip_int(ntohl(iphdr->ip_dst));
+  print_addr_ip_int(ntohl(iphdr->ip_dst));*/
 
   /* check if IP packet meets minimum length */
   if (len < sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t)) {
@@ -127,30 +127,14 @@ void sr_handle_ip_packet(struct sr_instance* sr,
         }
         icmp_hdr->icmp_sum = original_icmp_checksum;
 
-        /* echo request */
+        /* echo request ####################### TO DO ######################*/
         if (icmp_hdr->icmp_type == 8) {
-
-            /* change ETHERNET header*/
-            memcpy(ehdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN);
-            memcpy(ehdr->ether_shost, received_interface->addr, ETHER_ADDR_LEN);
-
-            /* change IP header */
-            iphdr->ip_dst = iphdr->ip_src;
-            iphdr->ip_src = received_interface->ip;
-
-            /* change ICMP header */
-            icmp_hdr->icmp_type = 0x00;
-            icmp_hdr->icmp_sum = 0;
-            icmp_hdr->icmp_sum = cksum(icmp_hdr, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
-            printf("YEAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-            printf("%d\n", icmp_hdr->icmp_sum);
-
-            /* send icmp reply back */
-            sr_send_packet(sr, packet, len, interface);
+          handle_icmp_request(sr, packet, len, 0, 0, received_interface);
         }
       }
-      else {
-        printf("contains UDP/TCP ############ TO DO ###########");
+      else { /* ################## TO DO ##################*/
+        printf("Port unreachable\n");
+        handle_icmp_request(sr, packet, len, 3, 3, received_interface);
       }
     }
     curr_if_node = curr_if_node->next;
@@ -163,7 +147,7 @@ void sr_handle_ip_packet(struct sr_instance* sr,
 
   if (iphdr->ip_ttl == 0) {
     /* Time exceeded ################ TO DO ################*/
-    return;
+    handle_icmp_request(sr, packet, len, 11, 0, received_interface);
   }
 
   /* perform LPM */
@@ -205,6 +189,29 @@ void sr_handle_ip_packet(struct sr_instance* sr,
 
   else {
     /* No match found ############# TO DO ##################*/
-    printf("ICMP not unreachable");
+    printf("ICMP net unreachable");
+    handle_icmp_request(sr, packet, len, 3, 0, received_interface);
   }
+}
+
+void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int len, 
+                          uint8_t icmp_type, uint8_t icmp_code, struct sr_if *interface) {
+  /* change ETHERNET header
+  memcpy(ehdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN);
+  memcpy(ehdr->ether_shost, received_interface->addr, ETHER_ADDR_LEN);
+
+  change IP header
+  iphdr->ip_dst = iphdr->ip_src;
+  iphdr->ip_src = received_interface->ip;
+
+  change ICMP header
+  icmp_hdr->icmp_type = 0x00;
+  icmp_hdr->icmp_sum = 0;
+  icmp_hdr->icmp_sum = cksum(icmp_hdr, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
+  printf("YEAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+  printf("%d\n", icmp_hdr->icmp_sum);
+
+  send icmp reply back
+  sr_send_packet(sr, packet, len, interface); */
+  printf("HI");
 }
