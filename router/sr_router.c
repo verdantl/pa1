@@ -103,7 +103,7 @@ void sr_handle_ip_packet(struct sr_instance* sr,
         uint16_t icmp_sum_temp = icmp_hdr->icmp_sum;
         icmp_hdr->icmp_sum = 0;
         uint16_t recalculation = cksum(icmp_hdr, sizeof(packet));
-        if (icmp_sum_temp != cksum(icmp_hdr, sizeof(sr_icmp_hdr_t))) {
+        if (icmp_sum_temp != cksum(icmp_hdr, sizeof(packet))) {
           icmp_hdr->icmp_sum = icmp_sum_temp;
           printf("%d\n", icmp_sum_temp);
           printf("%d\n", recalculation);
