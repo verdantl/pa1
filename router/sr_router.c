@@ -103,8 +103,8 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   uint16_t original_ip_checksum = iphdr->ip_sum;
   iphdr->ip_sum = 0;
   if (original_ip_checksum != cksum(iphdr, sizeof(sr_ip_hdr_t))){
-      fprintf(stderr, "IP header checksum is inccorect\n");
       iphdr->ip_sum = original_ip_checksum;
+      fprintf(stderr, "IP header checksum is inccorect\n");
       return;
   }
   iphdr->ip_sum = original_ip_checksum;
@@ -114,20 +114,18 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   while (curr_if_node) {
     if (curr_if_node->ip == iphdr->ip_dst) {
       printf("This is for me!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-      sr_icmp_hdr_t *icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+      if (iphdr->ip_p == ip_protocol_icmp){
+        sr_icmp_hdr_t *icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
-        /* verify checksum of ICMP packet */
+        /* verify ICMP header checksum */
         uint16_t original_icmp_checksum = icmp_hdr->icmp_sum;
         icmp_hdr->icmp_sum = 0;
         if (original_icmp_checksum != cksum(icmp_hdr, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t))) {
           icmp_hdr->icmp_sum = original_icmp_checksum;
-          printf("Checksum of ICMP packet is incorrect\n");
+          fprintf(stderr, "ICMP header checksum is incorrect\n");
           return;
         }
         icmp_hdr->icmp_sum = original_icmp_checksum;
-
-      /* icmp request */
-      if (iphdr->ip_p == ip_protocol_icmp) {
 
         /* echo request */
         if (icmp_hdr->icmp_type == 8) {
@@ -150,6 +148,9 @@ void sr_handle_ip_packet(struct sr_instance* sr,
             /* send icmp reply back */
             sr_send_packet(sr, packet, len, interface);
         }
+      }
+      else {
+        printf("contains UDP/TCP ############ TO DO ###########");
       }
     }
     curr_if_node = curr_if_node->next;
