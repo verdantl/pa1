@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -95,15 +96,15 @@ void sr_handle_ip_packet(struct sr_instance* sr,
 
   /* check if IP packet meets minimum length */
   if (len < sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t)) {
-      printf("IP packet doesn't meet minimum length\n");
+      fprintf(stderr, "IP packet doesn't meet minimum length\n");
       return;
   }
     
-  /* verify checksum of IP packet */
+  /* verify IP header checksum */
   uint16_t original_ip_checksum = iphdr->ip_sum;
   iphdr->ip_sum = 0;
   if (original_ip_checksum != cksum(iphdr, sizeof(sr_ip_hdr_t))){
-      printf("Checksum of IP packet is inccorect\n");
+      fprintf(stderr, "IP header checksum is inccorect\n");
       iphdr->ip_sum = original_ip_checksum;
       return;
   }
@@ -160,6 +161,11 @@ void sr_handle_ip_packet(struct sr_instance* sr,
       iphdr->ip_sum = 0;
       iphdr->ip_sum = cksum(iphdr, sizeof(sr_ip_hdr_t));
 
+      if (iphdr->ip_ttl == 0) {
+        /* Time exceeded ################ TO DO ################*/
+        return;
+      }
+
       /* perform LPM */
       struct sr_rt *curr_routing_node = sr->routing_table;
       struct sr_rt *matched = NULL;
@@ -176,23 +182,30 @@ void sr_handle_ip_packet(struct sr_instance* sr,
       if (matched) {
         printf("matcheddddddddddddd\n");
         /* struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache, iphdr->ip_dst); */
-        struct sr_arpentry *arp_entry = sr_arpcache_lookup(&sr->cache, matched->gw.s_addr);
+        struct sr_arpentry *arp_entry = sr_arpcache_lookup(&(sr->cache), matched->gw.s_addr);
 
-        if (arp_entry) { /* arp hit */
+        if (arp_entry) { /* ARP cache hit */
           printf("ARP hit");
-          /* send fram*/
-
+          /* send frame */
+          struct sr_if *new_interface = sr_get_interface(sr, matched->interface);
+          memcpy(ehdr->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN);
+          memcpy(ehdr->ether_shost, new_interface->addr, ETHER_ADDR_LEN);
+          free(arp_entry);
+          sr_send_packet(sr, packet, len, new_interface->name);
+          return;
         }
 
-        else {
+        else { /* ARP cache miss */
           /*send arp request */
-          struct sr_arpreq *req = sr_arpcache_queuereq(&sr->cache, matched->gw.s_addr, packet, len, matched->interface);
-          /* handle_arpreq(req, sr); */
+          /*struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), matched->gw.s_addr, packet, len, matched->interface);
+          handle_arpreq(sr, req); */
+          return;
         }
 
       }
 
       else {
+        /* No match found ############# TO DO ##################*/
         printf("ICMP not unreachable");
       }
     }
