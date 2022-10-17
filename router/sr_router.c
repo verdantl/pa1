@@ -260,8 +260,8 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
     new_icmp_t3_hdr->icmp_code = icmp_code;
     new_icmp_t3_hdr->unused = 0;
     new_icmp_t3_hdr->next_mtu = 1500;
-    new_icmp_t3_hdr->icmp_sum = 0;
     memcpy(new_icmp_t3_hdr->data, original_iphdr, ICMP_DATA_SIZE);
+    new_icmp_t3_hdr->icmp_sum = 0;
     new_icmp_t3_hdr->icmp_sum = cksum(new_icmp_t3_hdr, sizeof(sr_icmp_t3_hdr_t));
   }
   /*send icmp reply back */
