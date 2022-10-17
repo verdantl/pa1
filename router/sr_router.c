@@ -244,7 +244,7 @@ void sr_handle_arp_packet(struct sr_instance* sr,
 
         /*2. Fill in arp response header*/
 	printf("Attempting to fill in ARP Header\n");
-        sr_arp_hdr_t* response_arp_hdr = (sr_arp_hdr_t*) (response_ethernet_hdr + sizeof(sr_ethernet_hdr_t));
+        sr_arp_hdr_t* response_arp_hdr = (sr_arp_hdr_t*) (response_arp + sizeof(sr_ethernet_hdr_t));
 	printf("Obtained pointer for ARP header %d\n", response_arp_hdr);        
 	response_arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
         response_arp_hdr->ar_pro = arphdr->ar_pro;
@@ -262,7 +262,7 @@ void sr_handle_arp_packet(struct sr_instance* sr,
 
         printf("Filled in ARP header\n");
         print_hdr_arp(response_arp_hdr);
-	print_hdrs(response_ethernet_hdr, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+	print_hdrs(response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
 
         sr_send_packet(sr, response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), interface);
       } 
