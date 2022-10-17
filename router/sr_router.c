@@ -176,7 +176,7 @@ void sr_handle_ip_packet(struct sr_instance* sr,
     struct sr_arpentry *arp_entry = sr_arpcache_lookup(&(sr->cache), matched->gw.s_addr);
 
     if (arp_entry) { /* ARP cache hit */
-      printf("ARP hit");
+      printf("ARP hit\n");
       /* send frame */
       struct sr_if *new_interface = sr_get_interface(sr, matched->interface);
       memcpy(ehdr->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN);
@@ -187,8 +187,9 @@ void sr_handle_ip_packet(struct sr_instance* sr,
     }
     else { /* ARP cache miss */
       /*send arp request */
-      /*struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), matched->gw.s_addr, packet, len, matched->interface);
-      handle_arpreq(sr, req); */
+      printf("ARP miss\n");
+      struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), matched->gw.s_addr, packet, len, matched->interface);
+      handle_arpreq(sr, req);
       return;
     }
 
@@ -255,7 +256,7 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
   }
   /*send icmp reply back */
   sr_send_packet(sr, new_packet, len, interface->name);
-  printf("HI");
+  printf("sent icmp packet\n");
 }
 
 void sr_handle_arp_packet(struct sr_instance* sr,
