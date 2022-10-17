@@ -222,17 +222,17 @@ void sr_handle_arp_packet(struct sr_instance* sr,
   sr_print_if_list(sr);
   print_addr_ip_int(ntohl(arphdr->ar_sip));
 
-  if (ntohs(arphdr->ar_op) == arp_op_request){
-    printf("This is an ARP Request\n");
-    /* We need to construct a reply and send it back if the request matches the router's ethernet addresses */
-    struct sr_if *curr_if_node = sr->if_list;
+  struct sr_if *curr_if_node = sr->if_list;
 
-    while (curr_if_node){
-      if (curr_if_node->ip == arphdr->ar_tip){
-        printf("ARP Request IP matches one of the router's IP addresses\n");
-          /*Then the IP matches one of the IP's of the router, we need to construct a reply and send it back*/
+  while (curr_if_node){
+    if (curr_if_node->ip == arphdr->ar_tip){
+      printf("ARP Request IP matches one of the router's IP addresses\n");
+      if (ntohs(arphdr->ar_op) == arp_op_request){
+        /*Then the IP matches one of the IP's of the router*/
+        printf("This is an ARP Request\n");
+        /* We need to construct a reply and send it back if the request matches the router's ethernet addresses */
         uint8_t *response_arp = (uint8_t *) malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t)); 
-	      sr_ethernet_hdr_t *response_ethernet_hdr = (sr_ethernet_hdr_t *) response_arp;
+        sr_ethernet_hdr_t *response_ethernet_hdr = (sr_ethernet_hdr_t *) response_arp;
         /*1. Fill in ethernet header values*/
         memcpy(response_ethernet_hdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN); /*makes the destination the original source*/
         memcpy(response_ethernet_hdr->ether_shost, curr_if_node->addr, ETHER_ADDR_LEN);
@@ -241,7 +241,7 @@ void sr_handle_arp_packet(struct sr_instance* sr,
         
         /*2. Fill in arp response header*/
         sr_arp_hdr_t* response_arp_hdr = (sr_arp_hdr_t*) (response_arp + sizeof(sr_ethernet_hdr_t));
-	      response_arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
+        response_arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
         response_arp_hdr->ar_pro = arphdr->ar_pro;
         response_arp_hdr->ar_hln = arphdr->ar_hln;
         response_arp_hdr->ar_pln = arphdr->ar_pln;
@@ -253,19 +253,17 @@ void sr_handle_arp_packet(struct sr_instance* sr,
         memcpy(response_arp_hdr->ar_tha, arphdr->ar_sha, ETHER_ADDR_LEN);
         response_arp_hdr->ar_tip = arphdr->ar_sip;
 
-	      print_hdrs(response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+        print_hdrs(response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
 
         sr_send_packet(sr, response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), interface);
       } 
-      curr_if_node = curr_if_node->next;  
+      else if (ntohs(arphdr->ar_op) == arp_op_reply){
+        printf("This is an ARP Reply\n");
+      }          
+      else{
+        printf("Why is this not working %d %d %d \n", arp_op_request, arp_op_reply, ntohs(arphdr->ar_op));
+      }
     }
-
+    curr_if_node = curr_if_node->next;  
   }
-  else if (ntohs(arphdr->ar_op) == arp_op_reply){
-    printf("This is an ARP Reply\n");
-  }
-  else{
-    printf("Why is this not working %d %d %d \n", arp_op_request, arp_op_reply, ntohs(arphdr->ar_op));
-  }
-  
 }
