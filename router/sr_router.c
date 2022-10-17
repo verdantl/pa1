@@ -188,7 +188,11 @@ void sr_handle_ip_packet(struct sr_instance* sr,
     else { /* ARP cache miss */
       /*send arp request */
       printf("ARP miss\n");
+      print_addr_ip_int(ntohl(matched->gw.s_addr));
       struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), matched->gw.s_addr, packet, len, matched->interface);
+      printf("\n#########################\n");
+      print_hdrs(req->packets->buf, len);
+      printf("\n#########################\n");
       handle_arpreq(sr, req);
       return;
     }
@@ -261,6 +265,7 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
   }
   /*send icmp reply back */
   sr_send_packet(sr, new_packet, len, interface->name);
+  /* return; */
   printf("sent icmp packet\n");
 }
 
@@ -314,15 +319,26 @@ void sr_handle_arp_packet(struct sr_instance* sr,
         sr_send_packet(sr, response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), interface);
       } 
       else if (ntohs(arphdr->ar_op) == arp_op_reply){
-        printf("This is an ARP Reply\n");
-        struct sr_arpcache cache = sr->cache;
-        struct sr_arpentry *arp_entry = sr_arpcache_lookup(&cache, arphdr->ar_sip);
+        printf("Handling an ARP Reply\n");
+        /*struct sr_arpcache cache = sr->cache;*/
+        struct sr_arpentry *arp_entry = sr_arpcache_lookup(&(sr->cache), arphdr->ar_sip);
         if (!arp_entry){
-          sr_arpcache_insert(&cache, arphdr->ar_sha, arphdr->ar_sip);
+          sr_arpcache_insert(&(sr->cache), arphdr->ar_sha, arphdr->ar_sip);
+          sr_arpcache_dump(&(sr->cache));
         }
-        struct sr_arpreq *arp_request = cache.requests;
+        /*sr_arpcache_dump(&cache);*/
+        /*struct sr_arpreq *req = sr->cache.requests;
+        if (req) {
+          printf("HEYYYYYYYYYYYYYYYYYYYY\n\n\n\n");
+        }*/
+        struct sr_arpreq *arp_request = sr->cache.requests;
+        /*printf("---------------------------------------\n");
+        print_hdr_arp(arp_request);
+        printf("---------------------------------------\n");*/
         while (arp_request){
           if (arp_request->ip == arphdr->ar_sip){
+            printf("GOT HEREEEEEEEEEEEEEEEEE\n\n\n");
+            /*print_hdr_arp(arp_request); */
             struct sr_packet *packet = arp_request->packets;
             /* We send the packets for this request, and we need to find the interface for this ip*/
             struct sr_if *temp_if_node = sr->if_list;
@@ -339,10 +355,12 @@ void sr_handle_arp_packet(struct sr_instance* sr,
             }
             else{
               while (packet){
+                /*print_hdrs(packet, packet->len); */
                 sr_send_packet(sr, packet->buf, packet->len, temp_if_node->name);
                 packet = packet->next;
               }
             }
+            sr_arpreq_destroy(&(sr->cache), arp_request);
           }
           arp_request = arp_request->next;
         }
