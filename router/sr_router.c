@@ -325,8 +325,11 @@ void sr_handle_arp_packet(struct sr_instance* sr,
         struct sr_packet *packet = arp_request->packets;
         /* We send the packets for this request, and we need to find the interface for this ip*/
         while (packet){
-           sr_send_packet(sr, packet->buf, packet->len, interface);
-           packet = packet->next;
+          sr_ethernet_hdr_t *new_ehdr = (sr_ethernet_hdr_t *)packet->buf;
+          memcpy(new_ehdr->ether_dhost, arphdr->ar_sha, ETHER_ADDR_LEN);
+          memcpy(new_ehdr->ether_shost, received_interface->addr, ETHER_ADDR_LEN);
+          sr_send_packet(sr, packet->buf, packet->len, interface);
+          packet = packet->next;
         }
         sr_arpreq_destroy(&(sr->cache), arp_request);       
       }          
