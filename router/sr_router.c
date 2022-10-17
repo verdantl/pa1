@@ -236,24 +236,28 @@ void sr_handle_arp_packet(struct sr_instance* sr,
         memcpy(response_ethernet_hdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN); /*makes the destination the original source*/
         memcpy(response_ethernet_hdr->ether_shost, curr_if_node->addr, ETHER_ADDR_LEN);
         /*still need to fill in source address - router ethernet address*/
-        response_ethernet_hdr->ether_type = ethertype_arp;
+        response_ethernet_hdr->ether_type = htons(ethertype_arp);
 
         printf("Successfully filled in Ethernet header fields with ethernet type %d %d\n", ethertype_arp, response_ethernet_hdr->ether_type);
-        print_hdrs(response_ethernet_hdr, sizeof(sr_ethernet_hdr_t));
+        print_hdr_eth(response_ethernet_hdr);
 
         /*2. Fill in arp response header*/
+	printf("Attempting to fill in ARP Header\n");
         sr_arp_hdr_t* response_arp_hdr = (sr_arp_hdr_t*) (response_ethernet_hdr + sizeof(sr_ethernet_hdr_t));
-        response_arp_hdr->ar_hrd = arp_hrd_ethernet;
+	printf("Obtained pointer for ARP header %d\n", response_arp_hdr);        
+	response_arp_hdr->ar_hrd = arp_hrd_ethernet;
         response_arp_hdr->ar_pro = arphdr->ar_pro;
         response_arp_hdr->ar_hln = arphdr->ar_hln;
         response_arp_hdr->ar_pln = arphdr->ar_pln;
-        response_arp_hdr->ar_op = htons(arp_op_reply); 
+        response_arp_hdr->ar_op = htons(arp_op_reply);
+
+	printf("Filled in single fields for ARP header\n"); 
         /*still need to fill in source ip and hardware*/
         memcpy(response_arp_hdr->ar_sha, curr_if_node->addr, ETHER_ADDR_LEN);
-        memcpy(response_arp_hdr->ar_sip, arphdr->ar_tip, ETHER_ADDR_LEN);
-
+        response_arp_hdr->ar_sip = arphdr->ar_tip;
+	printf("Filled in new source values\n");
         memcpy(response_arp_hdr->ar_tha, arphdr->ar_sha, ETHER_ADDR_LEN);
-        memcpy(response_arp_hdr->ar_tip, arphdr->ar_sip, ETHER_ADDR_LEN);
+        response_arp_hdr->ar_tip = arphdr->ar_sip;
 
         printf("Filled in ARP header\n");
         print_hdrs(response_ethernet_hdr, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
