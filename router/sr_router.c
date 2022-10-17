@@ -261,11 +261,11 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
     new_icmp_t3_hdr->unused = 0;
     new_icmp_t3_hdr->next_mtu = 1500;
     new_icmp_t3_hdr->icmp_sum = 0;
-    new_icmp_t3_hdr->icmp_sum = cksum(new_icmp_t3_hdr, sizeof(sr_icmp_t3_hdr_t));
     memcpy(new_icmp_t3_hdr->data, original_iphdr, ICMP_DATA_SIZE);
+    new_icmp_t3_hdr->icmp_sum = cksum(new_icmp_t3_hdr, sizeof(sr_icmp_t3_hdr_t));
   }
   /*send icmp reply back */
-  sr_send_packet(sr, new_packet, len, interface->name);
+  sr_send_packet(sr, new_packet, new_packet_size, interface->name);
   /* return; */
   printf("sent icmp packet\n");
 }
