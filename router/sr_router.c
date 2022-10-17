@@ -74,6 +74,10 @@ void sr_handlepacket(struct sr_instance* sr,
       printf("This is an IP packettttttttttttttttttttttttttttttttttttt\n");
       sr_handle_ip_packet(sr, packet, len, interface);
     }
+  else if (ethtype == ethertype_arp){
+      printf("This is an ARP packet\n");
+      sr_handle_arp_packet(sr, packet, len, interface);
+  }
 
 }/* end sr_ForwardPacket */
 
@@ -199,8 +203,33 @@ void sr_handle_ip_packet(struct sr_instance* sr,
 
     curr_if_node = curr_if_node->next;
   }
+ 
+
+}
+
+void sr_handle_arp_packet(struct sr_instance* sr,
+        uint8_t * packet/* lent */,
+        unsigned int len,
+        char* interface/* lent */) {
+  struct sr_if* received_interface = sr_get_interface(sr, interface);
+  sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
+  sr_arp_hdr_t *arphdr = (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+  printf("-------------------------------\n");
+  print_addr_eth(ehdr->ether_dhost);
+  print_addr_eth(received_interface->addr);
+  printf("-------------------------------\n");
+  sr_print_if_list(sr);
+  print_addr_ip_int(ntohl(arphdr->ar_sip));
 
 
+  if (ntohs(arphdr->ar_op) == arp_op_request){
+    printf("This is an ARP Request\n");
+  }
+  else if (ntohs(arphdr->ar_op) == arp_op_reply){
+    printf("This is an ARP Reply\n");
+  }
+  else{
+    printf("Why is this not working %d %d %d \n", arp_op_request, arp_op_reply, ntohs(arphdr->ar_op));
+  }
   
-
 }
