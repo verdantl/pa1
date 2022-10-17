@@ -232,37 +232,28 @@ void sr_handle_arp_packet(struct sr_instance* sr,
         printf("ARP Request IP matches one of the router's IP addresses\n");
           /*Then the IP matches one of the IP's of the router, we need to construct a reply and send it back*/
         uint8_t *response_arp = (uint8_t *) malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t)); 
-	sr_ethernet_hdr_t *response_ethernet_hdr = (sr_ethernet_hdr_t *) response_arp;
+	      sr_ethernet_hdr_t *response_ethernet_hdr = (sr_ethernet_hdr_t *) response_arp;
         /*1. Fill in ethernet header values*/
         memcpy(response_ethernet_hdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN); /*makes the destination the original source*/
         memcpy(response_ethernet_hdr->ether_shost, curr_if_node->addr, ETHER_ADDR_LEN);
         /*still need to fill in source address - router ethernet address*/
         response_ethernet_hdr->ether_type = htons(ethertype_arp);
-
-        printf("Successfully filled in Ethernet header fields with ethernet type %d %d\n", ethertype_arp, response_ethernet_hdr->ether_type);
-        print_hdr_eth(response_ethernet_hdr);
-
+        
         /*2. Fill in arp response header*/
-	printf("Attempting to fill in ARP Header\n");
         sr_arp_hdr_t* response_arp_hdr = (sr_arp_hdr_t*) (response_arp + sizeof(sr_ethernet_hdr_t));
-	printf("Obtained pointer for ARP header %d\n", response_arp_hdr);        
-	response_arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
+	      response_arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
         response_arp_hdr->ar_pro = arphdr->ar_pro;
         response_arp_hdr->ar_hln = arphdr->ar_hln;
         response_arp_hdr->ar_pln = arphdr->ar_pln;
         response_arp_hdr->ar_op = htons(arp_op_reply);
 
-	printf("Filled in single fields for ARP header %d %d %d %d %d\n", response_arp_hdr->ar_hrd, response_arp_hdr->ar_pro, response_arp_hdr->ar_hln, response_arp_hdr->ar_pln, response_arp_hdr->ar_op); 
         /*still need to fill in source ip and hardware*/
         memcpy(response_arp_hdr->ar_sha, curr_if_node->addr, ETHER_ADDR_LEN);
         response_arp_hdr->ar_sip = arphdr->ar_tip;
-	printf("Filled in new source values\n");
         memcpy(response_arp_hdr->ar_tha, arphdr->ar_sha, ETHER_ADDR_LEN);
         response_arp_hdr->ar_tip = arphdr->ar_sip;
 
-        printf("Filled in ARP header\n");
-        print_hdr_arp(response_arp_hdr);
-	print_hdrs(response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+	      print_hdrs(response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
 
         sr_send_packet(sr, response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), interface);
       } 
