@@ -208,33 +208,38 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
   /* change ETHERNET header */
   int new_packet_size = 0;
   if (icmp_type == 0) {
-    new_packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
+    printf("THIS IS AN ECHO REQUEST\n\n");
+    new_packet_size = len; /* sending back the original content */
   }
   else {
-    new_packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
+    printf("THIS IS NOT AN ECHO REQUEST\n\n");
+    new_packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
   }
 
   /* set ETHERNET header */
   uint8_t *new_packet = (uint8_t *)malloc(new_packet_size);
   sr_ethernet_hdr_t *response_ehdr = (sr_ethernet_hdr_t *)new_packet;
-  sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
-  memcpy(response_ehdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN);
-  memcpy(response_ehdr->ether_shost, ehdr->ether_dhost, ETHER_ADDR_LEN);
+  sr_ethernet_hdr_t *original_ehdr = (sr_ethernet_hdr_t *)packet;
+  memcpy(response_ehdr->ether_dhost, original_ehdr->ether_shost, ETHER_ADDR_LEN);
+  memcpy(response_ehdr->ether_shost, interface->addr, ETHER_ADDR_LEN);
   response_ehdr->ether_type = htons(ethertype_ip); /*might need to use ntoh or hton*/
 
   /* set IP header */
-  sr_ip_hdr_t *iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-  sr_ip_hdr_t *new_iphdr = (sr_ip_hdr_t *)(new_packet + sizeof(sr_ethernet_hdr_t));
-  new_iphdr->ip_tos = iphdr->ip_tos;
-  new_iphdr->ip_len = iphdr->ip_len;
-  new_iphdr->ip_id = iphdr->ip_id;
-  new_iphdr->ip_off = iphdr->ip_off;
-  new_iphdr->ip_ttl = 255;
-  new_iphdr->ip_p = iphdr->ip_p;
-  new_iphdr->ip_src = iphdr->ip_dst;
-  new_iphdr->ip_dst = iphdr->ip_src;
-  new_iphdr->ip_sum = 0;
-  new_iphdr->ip_sum = cksum(new_iphdr, sizeof(sr_ip_hdr_t));
+  sr_ip_hdr_t *original_iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+  sr_ip_hdr_t *response_iphdr = (sr_ip_hdr_t *)(new_packet + sizeof(sr_ethernet_hdr_t));
+  memcpy(response_iphdr, original_iphdr, sizeof(sr_ip_hdr_t));
+  if (icmp_type == 3 || icmp_type == 11) {
+        response_iphdr->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
+  }
+  response_iphdr->ip_src = interface->ip;
+  if ((icmp_type == 0 && icmp_code == 0) || (icmp_type == 3 && icmp_code == 3)){ 
+        response_iphdr->ip_src = original_iphdr->ip_dst;
+    }
+  response_iphdr->ip_ttl = INIT_TTL;
+  response_iphdr->ip_p = ip_protocol_icmp;
+  response_iphdr->ip_dst = original_iphdr->ip_src;
+  response_iphdr->ip_sum = 0;
+  response_iphdr->ip_sum = cksum(response_iphdr, sizeof(sr_ip_hdr_t));
 
   /*set ICMP header */
   if (icmp_type == 0) {
@@ -251,8 +256,8 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
     new_icmp_t3_hdr->unused = 0;
     new_icmp_t3_hdr->next_mtu = 1500;
     new_icmp_t3_hdr->icmp_sum = 0;
-    new_icmp_t3_hdr->icmp_sum = cksum(new_icmp_t3_hdr, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
-    /*memcpy(new_icmp_t3_hdr->data, iphdr->)*/
+    new_icmp_t3_hdr->icmp_sum = cksum(new_icmp_t3_hdr, sizeof(sr_icmp_t3_hdr_t));
+    memcpy(new_icmp_t3_hdr->data, original_iphdr, ICMP_DATA_SIZE);
   }
   /*send icmp reply back */
   sr_send_packet(sr, new_packet, len, interface->name);
