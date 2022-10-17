@@ -232,9 +232,10 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
   sr_ip_hdr_t *original_iphdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   sr_ip_hdr_t *response_iphdr = (sr_ip_hdr_t *)(new_packet + sizeof(sr_ethernet_hdr_t));
   memcpy(response_iphdr, original_iphdr, sizeof(sr_ip_hdr_t));
-  if (icmp_type == 3 || icmp_type == 11) {
+  /*if (icmp_type == 3 || icmp_type == 11) {
         response_iphdr->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
-  }
+  }*/
+  response_iphdr->ip_len = htons(new_packet_size - sizeof(sr_ethernet_hdr_t));
   response_iphdr->ip_src = interface->ip;
   if ((icmp_type == 0 && icmp_code == 0) || (icmp_type == 3 && icmp_code == 3)){ 
         response_iphdr->ip_src = original_iphdr->ip_dst;
