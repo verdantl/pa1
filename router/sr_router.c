@@ -76,6 +76,10 @@ void sr_handlepacket(struct sr_instance* sr,
   if (ethtype == ethertype_ip) { /* IP packet */
       sr_handle_ip_packet(sr, packet, len, interface);
     }
+  else if (ethtype == ethertype_arp){
+      printf("This is an ARP packet\n");
+      sr_handle_arp_packet(sr, packet, len, interface);
+  }
 
 }/* end sr_ForwardPacket */
 
@@ -249,9 +253,98 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
     new_icmp_t3_hdr->icmp_sum = cksum(new_icmp_t3_hdr, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
     /*memcpy(new_icmp_t3_hdr->data, iphdr->)*/
   }
-
-
   /*send icmp reply back */
   sr_send_packet(sr, new_packet, len, interface->name);
   printf("HI");
+}
+
+void sr_handle_arp_packet(struct sr_instance* sr,
+        uint8_t * packet/* lent */,
+        unsigned int len,
+        char* interface/* lent */) {
+  struct sr_if* received_interface = sr_get_interface(sr, interface);
+  sr_ethernet_hdr_t *ehdr = (sr_ethernet_hdr_t *)packet;
+  sr_arp_hdr_t *arphdr = (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+  printf("-------------------------------\n");
+  print_addr_eth(ehdr->ether_dhost);
+  print_addr_eth(received_interface->addr);
+  printf("-------------------------------\n");
+  sr_print_if_list(sr);
+  print_addr_ip_int(ntohl(arphdr->ar_sip));
+
+  struct sr_if *curr_if_node = sr->if_list;
+
+  while (curr_if_node){
+    if (curr_if_node->ip == arphdr->ar_tip){
+      printf("ARP Request IP matches one of the router's IP addresses\n");
+      if (ntohs(arphdr->ar_op) == arp_op_request){
+        /*Then the IP matches one of the IP's of the router*/
+        printf("This is an ARP Request\n");
+        /* We need to construct a reply and send it back if the request matches the router's ethernet addresses */
+        uint8_t *response_arp = (uint8_t *) malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t)); 
+        sr_ethernet_hdr_t *response_ethernet_hdr = (sr_ethernet_hdr_t *) response_arp;
+        /*1. Fill in ethernet header values*/
+        memcpy(response_ethernet_hdr->ether_dhost, ehdr->ether_shost, ETHER_ADDR_LEN); /*makes the destination the original source*/
+        memcpy(response_ethernet_hdr->ether_shost, curr_if_node->addr, ETHER_ADDR_LEN);
+        /*still need to fill in source address - router ethernet address*/
+        response_ethernet_hdr->ether_type = htons(ethertype_arp);
+        
+        /*2. Fill in arp response header*/
+        sr_arp_hdr_t* response_arp_hdr = (sr_arp_hdr_t*) (response_arp + sizeof(sr_ethernet_hdr_t));
+        response_arp_hdr->ar_hrd = htons(arp_hrd_ethernet);
+        response_arp_hdr->ar_pro = arphdr->ar_pro;
+        response_arp_hdr->ar_hln = arphdr->ar_hln;
+        response_arp_hdr->ar_pln = arphdr->ar_pln;
+        response_arp_hdr->ar_op = htons(arp_op_reply);
+
+        /*still need to fill in source ip and hardware*/
+        memcpy(response_arp_hdr->ar_sha, curr_if_node->addr, ETHER_ADDR_LEN);
+        response_arp_hdr->ar_sip = arphdr->ar_tip;
+        memcpy(response_arp_hdr->ar_tha, arphdr->ar_sha, ETHER_ADDR_LEN);
+        response_arp_hdr->ar_tip = arphdr->ar_sip;
+
+        print_hdrs(response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+
+        sr_send_packet(sr, response_arp, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), interface);
+      } 
+      else if (ntohs(arphdr->ar_op) == arp_op_reply){
+        printf("This is an ARP Reply\n");
+        struct sr_arpcache cache = sr->cache;
+        struct sr_arpentry *arp_entry = sr_arpcache_lookup(&cache, arphdr->ar_sip);
+        if (!arp_entry){
+          sr_arpcache_insert(&cache, arphdr->ar_sha, arphdr->ar_sip);
+        }
+        struct sr_arpreq *arp_request = cache.requests;
+        while (arp_request){
+          if (arp_request->ip == arphdr->ar_sip){
+            struct sr_packet *packet = arp_request->packets;
+            /* We send the packets for this request, and we need to find the interface for this ip*/
+            struct sr_if *temp_if_node = sr->if_list;
+            int found = 0;
+            while (temp_if_node){
+              if (temp_if_node->ip == arp_request->ip){
+                found = 1;
+                break;
+              }
+              temp_if_node = temp_if_node->next;
+            }
+            if (found == 0){
+              return;
+            }
+            else{
+              while (packet){
+                sr_send_packet(sr, packet->buf, packet->len, temp_if_node->name);
+                packet = packet->next;
+              }
+            }
+          }
+          arp_request = arp_request->next;
+        }
+      }          
+      else{
+        printf("Why is this not working %d %d %d \n", arp_op_request, arp_op_reply, ntohs(arphdr->ar_op));
+      }
+    }
+    curr_if_node = curr_if_node->next;  
+  }
 }
