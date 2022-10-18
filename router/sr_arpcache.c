@@ -20,13 +20,13 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *arpreq) {
         if(arpreq->times_sent >= 5) {
             /* Pointer to the current packet waiting on the ARP request */
             struct sr_packet *pckt = arpreq->packets;
-            
+
             /* Iterate through all the packets waiting on the ARP request */     
             while (pckt) {
 
                 /* Send ICMP host unreachable to source address of all packets waiting */
-                // sr_send_icmp_msg(eth_hdr);
-
+                struct sr_if* iface = sr_get_interface(sr, arpreq->packets->iface);
+                handle_icmp_request(sr, pckt->buf, pckt->len, 3, 1, iface);
                 pckt = pckt->next;
             }
             /* Destroy the ARP request */
@@ -34,8 +34,8 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *arpreq) {
         } else {
             /* construct the ARP request, the ARP header and the Ethernet header */
             int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
-            uint8_t* req = malloc(len);
-            sr_ethernet_hdr_t* arpreq_eth_hdr = (sr_ethernet_hdr_t*) req;
+            uint8_t *req = malloc(len);
+            sr_ethernet_hdr_t *arpreq_eth_hdr = (sr_ethernet_hdr_t*) req;
             sr_arp_hdr_t* arpreq_arp_hdr = (sr_arp_hdr_t*)(req + sizeof(sr_ethernet_hdr_t));
             
             /* Get the required interface */
@@ -70,6 +70,7 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *arpreq) {
     }
 
 }
+
 
 /* 
   This function gets called every second. For each request sent out, we keep
