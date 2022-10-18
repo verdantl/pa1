@@ -348,4 +348,3 @@ void sr_handle_arp_packet(struct sr_instance* sr,
     curr_if_node = curr_if_node->next;  
   }
 }
-}
