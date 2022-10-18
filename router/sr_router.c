@@ -320,50 +320,15 @@ void sr_handle_arp_packet(struct sr_instance* sr,
       } 
       else if (ntohs(arphdr->ar_op) == arp_op_reply){
         printf("Handling an ARP Reply\n");
-        /*struct sr_arpcache cache = sr->cache;*/
-        struct sr_arpentry *arp_entry = sr_arpcache_lookup(&(sr->cache), arphdr->ar_sip);
-        if (!arp_entry){
-          sr_arpcache_insert(&(sr->cache), arphdr->ar_sha, arphdr->ar_sip);
-          sr_arpcache_dump(&(sr->cache));
+        struct sr_arpreq *arp_request = sr_arpcache_insert(&(sr->cache), arphdr->ar_sha, arphdr->ar_sip);
+        sr_arpcache_dump(&(sr->cache));
+        struct sr_packet *packet = arp_request->packets;
+        /* We send the packets for this request, and we need to find the interface for this ip*/
+        while (packet){
+           sr_send_packet(sr, packet->buf, packet->len, interface);
+           packet = packet->next;
         }
-        /*sr_arpcache_dump(&cache);*/
-        /*struct sr_arpreq *req = sr->cache.requests;
-        if (req) {
-          printf("HEYYYYYYYYYYYYYYYYYYYY\n\n\n\n");
-        }*/
-        struct sr_arpreq *arp_request = sr->cache.requests;
-        /*printf("---------------------------------------\n");
-        print_hdr_arp(arp_request);
-        printf("---------------------------------------\n");*/
-        while (arp_request){
-          if (arp_request->ip == arphdr->ar_sip){
-            printf("GOT HEREEEEEEEEEEEEEEEEE\n\n\n");
-            /*print_hdr_arp(arp_request); */
-            struct sr_packet *packet = arp_request->packets;
-            /* We send the packets for this request, and we need to find the interface for this ip*/
-            struct sr_if *temp_if_node = sr->if_list;
-            int found = 0;
-            while (temp_if_node){
-              if (temp_if_node->ip == arp_request->ip){
-                found = 1;
-                break;
-              }
-              temp_if_node = temp_if_node->next;
-            }
-            if (found == 0){
-              return;
-            }
-            else{
-              while (packet){
-                /*print_hdrs(packet, packet->len); */
-                sr_send_packet(sr, packet->buf, packet->len, temp_if_node->name);
-                packet = packet->next;
-              }
-            }
-            sr_arpreq_destroy(&(sr->cache), arp_request);
-          }
-          arp_request = arp_request->next;
-        }
+        sr_arpreq_destroy(&(sr->cache), arp_request);       
       }          
       else{
         printf("Why is this not working %d %d %d \n", arp_op_request, arp_op_reply, ntohs(arphdr->ar_op));
