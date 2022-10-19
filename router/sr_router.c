@@ -162,10 +162,10 @@ void sr_handle_ip_packet(struct sr_instance* sr,
   struct sr_rt *matched = NULL;
   while (curr_routing_node) {
     uint32_t masked_dest = iphdr->ip_dst & curr_routing_node->mask.s_addr;
-    if (masked_dest == curr_routing_node->dest.s_addr) {
-      matched = curr_routing_node;
-      break;
-
+    if (masked_dest == (curr_routing_node->dest.s_addr & curr_routing_node->mask.s_addr)) {
+      if(!matched || matched->mask.s_addr < curr_routing_node->mask.s_addr) {
+        matched = curr_routing_node;
+      }
     }
     curr_routing_node = curr_routing_node->next;
   }
