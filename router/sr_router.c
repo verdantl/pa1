@@ -222,6 +222,9 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
 
   /* set ETHERNET header */
   uint8_t *new_packet = (uint8_t *)malloc(new_packet_size);
+  if (icmp_type == 0){
+      memcpy(new_packet, packet, new_packet_size);
+  }
   sr_ethernet_hdr_t *response_ehdr = (sr_ethernet_hdr_t *)new_packet;
   sr_ethernet_hdr_t *original_ehdr = (sr_ethernet_hdr_t *)packet;
   memcpy(response_ehdr->ether_dhost, original_ehdr->ether_shost, ETHER_ADDR_LEN);
@@ -253,7 +256,6 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
     new_icmp_hdr->icmp_code = icmp_code;
     new_icmp_hdr->icmp_sum = 0;
     new_icmp_hdr->icmp_sum = cksum(new_icmp_hdr, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
-    memcpy(new_icmp_hdr + sizeof(sr_icmp_hdr_t), (uint8_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + 12), len - (sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + 12));
   }
   else {
     sr_icmp_t3_hdr_t *new_icmp_t3_hdr = (sr_icmp_t3_hdr_t *)(new_packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
