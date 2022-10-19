@@ -253,6 +253,7 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
     new_icmp_hdr->icmp_code = icmp_code;
     new_icmp_hdr->icmp_sum = 0;
     new_icmp_hdr->icmp_sum = cksum(new_icmp_hdr, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
+    memcpy(new_icmp_hdr + sizeof(sr_icmp_hdr_t), (uint8_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + 12), len - (sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + 12));
   }
   else {
     sr_icmp_t3_hdr_t *new_icmp_t3_hdr = (sr_icmp_t3_hdr_t *)(new_packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -322,7 +323,6 @@ void sr_handle_arp_packet(struct sr_instance* sr,
       else if (ntohs(arphdr->ar_op) == arp_op_reply){
         printf("Handling an ARP Reply\n");
         struct sr_arpreq *arp_request = sr_arpcache_insert(&(sr->cache), arphdr->ar_sha, arphdr->ar_sip);
-        sr_arpcache_dump(&(sr->cache));
         struct sr_packet *packet = arp_request->packets;
         /* We send the packets for this request, and we need to find the interface for this ip*/
         while (packet){
