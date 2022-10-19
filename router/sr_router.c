@@ -222,6 +222,9 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
 
   /* set ETHERNET header */
   uint8_t *new_packet = (uint8_t *)malloc(new_packet_size);
+  if (icmp_type == 0){
+      memcpy(new_packet, packet, new_packet_size);
+  }
   sr_ethernet_hdr_t *response_ehdr = (sr_ethernet_hdr_t *)new_packet;
   sr_ethernet_hdr_t *original_ehdr = (sr_ethernet_hdr_t *)packet;
   memcpy(response_ehdr->ether_dhost, original_ehdr->ether_shost, ETHER_ADDR_LEN);
@@ -322,7 +325,6 @@ void sr_handle_arp_packet(struct sr_instance* sr,
       else if (ntohs(arphdr->ar_op) == arp_op_reply){
         printf("Handling an ARP Reply\n");
         struct sr_arpreq *arp_request = sr_arpcache_insert(&(sr->cache), arphdr->ar_sha, arphdr->ar_sip);
-        sr_arpcache_dump(&(sr->cache));
         struct sr_packet *packet = arp_request->packets;
         /* We send the packets for this request, and we need to find the interface for this ip*/
         while (packet){
