@@ -23,8 +23,10 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *arpreq) {
 
             /* Iterate through all the packets waiting on the ARP request */     
             while (pckt) {
+                
                 /* Send ICMP host unreachable to source address of all packets waiting */
-                struct sr_if* iface = sr_get_interface(sr, pckt->iface);
+                uint8_t *eth_addr = ((sr_ethernet_hdr_t *)(pckt->buf))->ether_dhost;
+                struct sr_if* iface = sr_get_interface_from_eth(sr, eth_addr);
                 handle_icmp_request(sr, pckt->buf, pckt->len, 3, 1, iface);
                 pckt = pckt->next;
             }
