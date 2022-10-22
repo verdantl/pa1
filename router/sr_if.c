@@ -181,3 +181,28 @@ void sr_print_if(struct sr_if* iface)
     Debug("\n");
     Debug("\tinet addr %s\n",inet_ntoa(ip_addr));
 } /* -- sr_print_if -- */
+
+
+struct sr_if *sr_get_interface_from_address(struct sr_instance *sr, uint8_t *eth_addr)
+{
+    struct sr_if *curr_iface = sr->if_list;
+    struct sr_if *dest_iface = NULL;
+    int matched;
+    while (curr_iface) {
+        matched = 1;
+        int i;
+        for (i = 0; i < ETHER_ADDR_LEN; i++) {
+            if (curr_iface->addr[i] != eth_addr[i]) {
+                matched = 0;
+                break;
+            }
+        }
+        if (matched) {
+            dest_iface = curr_iface;
+            break;
+        }
+        curr_iface = curr_iface->next;
+    }
+
+    return dest_iface;
+}
