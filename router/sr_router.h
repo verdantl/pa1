@@ -63,6 +63,8 @@ void sr_handle_ip_packet(struct sr_instance* , uint8_t * , unsigned int , char* 
 void sr_handle_arp_packet(struct sr_instance* , uint8_t * , unsigned int , char* );
 void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int len, 
                           uint8_t icmp_type, uint8_t icmp_code, struct sr_if *interface);
+void handle_ip_forwarding(struct sr_instance *sr, uint8_t *packet, 
+                          unsigned int len, struct sr_if *received_interface);
 
 /* -- sr_if.c -- */
 void sr_add_interface(struct sr_instance* , const char* );
