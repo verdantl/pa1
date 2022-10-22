@@ -42,6 +42,10 @@ void handle_arpreq(struct sr_instance *sr, struct sr_arpreq *arpreq) {
             /* Get the required interface */
             struct sr_if* iface = sr_get_interface(sr, arpreq->packets->iface);
 
+            if (!iface) {
+                return;
+            }
+
             /* Set the Ethernet header */
             memset(arpreq_eth_hdr->ether_dhost, 0xFF, ETHER_ADDR_LEN);
             memcpy(arpreq_eth_hdr->ether_shost, iface->addr, ETHER_ADDR_LEN);
