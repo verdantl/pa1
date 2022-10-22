@@ -202,6 +202,7 @@ void handle_icmp_request(struct sr_instance *sr, uint8_t *packet, unsigned int l
   
   /* start IP forwarding */
   handle_ip_forwarding(sr, new_packet, new_packet_size, interface);
+  free(new_packet);
 }
 
 void handle_ip_forwarding(struct sr_instance *sr, uint8_t *packet, 
@@ -262,8 +263,6 @@ void handle_ip_forwarding(struct sr_instance *sr, uint8_t *packet,
     printf("ICMP net unreachable\n");
     handle_icmp_request(sr, packet, len, 3, 0, received_interface);
   }
-
-  free(packet);
 }
 
 void sr_handle_arp_packet(struct sr_instance* sr,
